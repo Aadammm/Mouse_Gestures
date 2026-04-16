@@ -1,0 +1,34 @@
+<idea-plugin>
+    <id>com.mousegesture</id>
+    <name>Mouse Gestures</name>
+    <version>1.0.0</version>
+    <vendor>MouseGesture</vendor>
+    <description>Execute IntelliJ actions by drawing mouse gestures. Hold right mouse button and drag to perform a gesture.</description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+                serviceImplementation="com.mousegesture.services.GestureManagerService"/>
+        <applicationService
+                serviceImplementation="com.mousegesture.services.MouseListenerService"/>
+        <applicationService
+                serviceImplementation="com.mousegesture.services.GestureOrchestratorService"/>
+
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.mousegesture.configs.GestureSettingsConfig"
+                id="com.mousegesture.configs.GestureSettingsConfig"
+                displayName="Mouse Gestures"/>
+
+        <postStartupActivity implementation="com.mousegesture.GesturePluginStartup"/>
+    </extensions>
+
+    <actions>
+        <group id="com.mousegesture.MouseGesturesGroup"
+               class="com.mousegesture.actions.MouseGesturesActionGroup"
+               popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </group>
+    </actions>
+</idea-plugin>
