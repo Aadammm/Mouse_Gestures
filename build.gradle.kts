@@ -17,27 +17,27 @@ dependencies {
 }
 
 intellij {
-    version.set("2024.1.4")
+    version.set("2024.2")
     type.set("IC") // IntelliJ IDEA Community Edition
     plugins.set(listOf())
 }
 
 tasks {
     patchPluginXml {
-        sinceBuild.set("241")
+        sinceBuild.set("242")
         untilBuild.set("999.*")
     }
     buildSearchableOptions {
         enabled = false
     }
     compileKotlin {
-        compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
     }
     compileTestKotlin {
-        compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }

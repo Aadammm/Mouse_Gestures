@@ -36,6 +36,10 @@ class GestureManagerService : PersistentStateComponent<GestureManagerService.Sta
     val visualizationSettings = GestureVisualizationSettings()
     var isPluginEnabled: Boolean = true
 
+    init {
+        initDefaults()
+    }
+
     override fun getState(): State {
         val state = State(
             showTrail = visualizationSettings.showTrail,

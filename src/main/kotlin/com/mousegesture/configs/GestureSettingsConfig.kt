@@ -19,7 +19,9 @@ import com.mousegesture.services.GestureOrchestratorService
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
+import java.awt.geom.RoundRectangle2D
 import java.util.*
+import com.intellij.ui.components.JBTabbedPane
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -56,6 +58,13 @@ class GestureSettingsConfig : Configurable {
     private var isRecording = false
     private var suppressListeners = false
     private var suppressTableListener = false
+    private var recordingGestureId: String? = null
+    private var recordingRowIndex: Int = -1
+    private var savedWindowBounds: java.awt.Rectangle? = null
+
+    private var isRevertMode = false
+    private var revertPattern: List<GestureDirection>? = null
+    private var revertGestureId: String? = null
 
     override fun getDisplayName() = "Mouse Gestures"
 
@@ -84,6 +93,15 @@ class GestureSettingsConfig : Configurable {
         val panel = JPanel(BorderLayout(8, 8))
         panel.border = JBUI.Borders.empty(10)
 
+        val tabs =  JBTabbedPane()
+        tabs.addTab("Gestures", buildGesturesTab())
+        tabs.addTab("Help / About", buildHelpPanel())
+
+        panel.add(tabs, BorderLayout.CENTER)
+        return panel
+    }
+
+    private fun buildGesturesTab(): JComponent {
         val leftPanel = JPanel(BorderLayout(4, 4))
         leftPanel.add(buildToolbar(), BorderLayout.NORTH)
         leftPanel.add(buildTable(), BorderLayout.CENTER)
@@ -96,8 +114,51 @@ class GestureSettingsConfig : Configurable {
         val split = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel)
         split.resizeWeight = 0.4
         split.isContinuousLayout = true
+        return split
+    }
 
-        panel.add(split, BorderLayout.CENTER)
+    private fun buildHelpPanel(): JComponent {
+        val panel = JPanel(BorderLayout(8, 8))
+        panel.border = JBUI.Borders.empty(16)
+
+        val text = """
+            <html>
+            <h2>Mouse Gestures Plugin</h2>
+            <p><b>Version:</b> 1.0.0</p>
+            <p><b>Author:</b> TODO – fill in manually</p>
+            <br>
+            <h3>How to use</h3>
+            <ul>
+              <li>Hold the <b>right mouse button</b> and drag to draw a gesture.</li>
+              <li>Release to execute the assigned action.</li>
+              <li>A short right-click (no drag) still shows the context menu.</li>
+            </ul>
+            <br>
+            <h3>Default gestures</h3>
+            <table border="1" cellpadding="4" cellspacing="0">
+              <tr><th>Gesture</th><th>Action</th></tr>
+              <tr><td>← Left</td><td>Navigate Backward</td></tr>
+              <tr><td>→ Right</td><td>Navigate Forward</td></tr>
+              <tr><td>↓ Down</td><td>Comment/Uncomment Line</td></tr>
+              <tr><td>↓ Down → Right</td><td>Close Tab</td></tr>
+            </table>
+            <br>
+            <h3>Adding / editing gestures</h3>
+            <ol>
+              <li>Click <b>+ Add</b> or select an existing gesture in the list.</li>
+              <li>Enter a name and click <b>⏺ Record Gesture</b>.</li>
+              <li>Draw the gesture with the right mouse button – the settings window hides temporarily.</li>
+              <li>Select an action from the list or type an action ID directly.</li>
+              <li>Click <b>OK</b> to save.</li>
+            </ol>
+            <br>
+            <p><i>TODO: add your own notes here.</i></p>
+            </html>
+        """.trimIndent()
+
+        val label = JBLabel(text)
+        label.verticalAlignment = SwingConstants.TOP
+        panel.add(JBScrollPane(label), BorderLayout.CENTER)
         return panel
     }
 
@@ -241,23 +302,26 @@ class GestureSettingsConfig : Configurable {
         matchColorPicker = ColorPickerField(vis.matchColor)
         trailThicknessSpinner = JSpinner(SpinnerNumberModel(vis.trailThickness.toDouble(), 1.0, 10.0, 0.5))
 
-        g.gridx = 0; g.gridy = 0; g.gridwidth = 2; panel.add(showTrailCheck, g)
+        g.gridx = 0; g.gridy = 0; g.gridwidth = 5; panel.add(showTrailCheck, g)
         g.gridy = 1; panel.add(showDirectionsCheck, g)
+        g.gridwidth = 1
 
-        g.gridy = 2; g.gridwidth = 1; g.fill = GridBagConstraints.NONE; g.weightx = 0.0
-        panel.add(JBLabel("Trail color:"), g)
-        g.gridx = 1; g.fill = GridBagConstraints.HORIZONTAL; g.weightx = 1.0
-        panel.add(trailColorPicker, g)
+        val defaultInsets = Insets(3, 6, 3, 6)
+        val gapInsets    = Insets(3, 14, 3, 6)
+        g.gridy = 2; g.gridx = 0; g.fill = GridBagConstraints.NONE; g.weightx = 0.0
+        g.insets = defaultInsets; panel.add(JBLabel("Trail:"), g)
+        g.gridx = 1; panel.add(trailColorPicker, g)
+        g.gridx = 2; g.insets = gapInsets; panel.add(JBLabel("Match:"), g)
+        g.gridx = 3; g.insets = defaultInsets; panel.add(matchColorPicker, g)
+        // prázdny filler aby ostatné stĺpce neboli roztiahnuté
+        g.gridx = 4; g.weightx = 1.0; g.fill = GridBagConstraints.HORIZONTAL
+        panel.add(JPanel().also { it.isOpaque = false }, g)
 
         g.gridx = 0; g.gridy = 3; g.fill = GridBagConstraints.NONE; g.weightx = 0.0
-        panel.add(JBLabel("Match color:"), g)
-        g.gridx = 1; g.fill = GridBagConstraints.HORIZONTAL; g.weightx = 1.0
-        panel.add(matchColorPicker, g)
-
-        g.gridx = 0; g.gridy = 5; g.fill = GridBagConstraints.NONE; g.weightx = 0.0
-        panel.add(JBLabel("Trail thickness:"), g)
-        g.gridx = 1; g.fill = GridBagConstraints.HORIZONTAL
+        g.insets = defaultInsets; panel.add(JBLabel("Trail thickness:"), g)
+        g.gridx = 1; g.fill = GridBagConstraints.HORIZONTAL; g.gridwidth = 3
         panel.add(trailThicknessSpinner, g)
+        g.gridwidth = 1
 
         return panel
     }
@@ -319,6 +383,10 @@ class GestureSettingsConfig : Configurable {
 
     private fun loadGestureIntoEditPanel() {
         val gesture = selectedGesture() ?: run { setEditPanelEnabled(false); return }
+        if (isRevertMode && gesture.id != revertGestureId) {
+            isRevertMode = false; revertPattern = null; revertGestureId = null
+            recordButton.text = "⏺ Record Gesture"
+        }
         setEditPanelEnabled(true)
         suppressListeners = true
         nameField.text = gesture.name
@@ -375,24 +443,43 @@ class GestureSettingsConfig : Configurable {
     }
 
     private fun toggleRecording() {
-        if (isRecording) cancelRecording() else startRecording()
+        when {
+            isRecording   -> cancelRecording()
+            isRevertMode  -> revertRecording()
+            else          -> startRecording()
+        }
     }
 
     private fun startRecording() {
-        setParentWindowOpacity(false) // dialóg sa stane priehľadným, vidno IDE a overlay pod ním
+        val gesture = selectedGesture() ?: return
+        // Ulož aktuálny vzor pre prípad revertu
+        isRevertMode = false
+        revertPattern = gesture.pattern.toList()
+        revertGestureId = gesture.id
+
+        recordingGestureId = gesture.id
+        recordingRowIndex = table.selectedRow
+
+        setParentWindowOpacity(false)
         isRecording = true
         recordButton.text = "⏹ Cancel"
         patternLabel.text = "Draw gesture..."
         duplicateWarningLabel.text = " "
+
         orchestratorService.startGestureRecording { pattern ->
             SwingUtilities.invokeLater {
-                setParentWindowOpacity(true) // Zobrazí okno
-
-                // Focus späť na okno nastavení
+                setParentWindowOpacity(true)
                 val window = SwingUtilities.getWindowAncestor(recordButton)
                 window?.toFront()
                 window?.requestFocus()
-                onGestureRecorded(pattern)
+                SwingUtilities.invokeLater {
+                    if (recordingRowIndex >= 0 && recordingRowIndex < workingGestures.size) {
+                        suppressTableListener = true
+                        table.selectionModel.setSelectionInterval(recordingRowIndex, recordingRowIndex)
+                        suppressTableListener = false
+                    }
+                    onGestureRecorded(pattern)
+                }
             }
         }
     }
@@ -400,23 +487,47 @@ class GestureSettingsConfig : Configurable {
     private fun cancelRecording() {
         setParentWindowOpacity(true)
         isRecording = false
+        isRevertMode = false
+        revertPattern = null
+        revertGestureId = null
+        recordingGestureId = null
+        recordingRowIndex = -1
         recordButton.text = "⏺ Record Gesture"
         orchestratorService.stopGestureRecording()
         loadGestureIntoEditPanel()
     }
 
-    private fun onGestureRecorded(pattern: List<GestureDirection>) {
-        setParentWindowOpacity(true)
-        isRecording = false
+    /** Vráti gesto na vzor pred nahrávaním. */
+    private fun revertRecording() {
+        val gesture = workingGestures.firstOrNull { it.id == revertGestureId } ?: return
+        gesture.pattern = revertPattern ?: emptyList()
+        isRevertMode = false
+        revertPattern = null
+        revertGestureId = null
         recordButton.text = "⏺ Record Gesture"
-        val gesture = selectedGesture() ?: return
-        if (pattern.isEmpty()) {
+        refreshTable()
+        loadGestureIntoEditPanel()
+        duplicateWarningLabel.text = " "
+    }
+
+    private fun onGestureRecorded(pattern: List<GestureDirection>) {
+        isRecording = false
+        val id = recordingGestureId
+        recordingGestureId = null
+        recordingRowIndex = -1
+        val gesture = if (id != null) workingGestures.firstOrNull { it.id == id }
+                      else selectedGesture()
+        if (gesture == null || pattern.isEmpty()) {
+            isRevertMode = false; revertPattern = null; revertGestureId = null
+            recordButton.text = "⏺ Record Gesture"
             loadGestureIntoEditPanel(); return
         }
         val duplicate = workingGestures.firstOrNull { it.id != gesture.id && it.matchesPattern(pattern) }
         gesture.pattern = pattern
-        patternLabel.text = gesture.patternDescription
+        isRevertMode = true
+        recordButton.text = "↩ Revert"
         refreshTable()
+        loadGestureIntoEditPanel()
         duplicateWarningLabel.text = if (duplicate != null) "⚠ Pattern already used by '${duplicate.name}'" else " "
     }
 
@@ -433,14 +544,23 @@ class GestureSettingsConfig : Configurable {
             actionSearchField.text = ""; actionIdField.text = ""
             enabledCheckBox.isSelected = false; duplicateWarningLabel.text = " "
             actionList.clearSelection()
+            isRevertMode = false; revertPattern = null; revertGestureId = null
+            if (!isRecording) recordButton.text = "⏺ Record Gesture"
         }
     }
 
-    /** Nastaví priehľadnosť okna settings – pri nahrávaní 15% opacity aby bola vidná stopa */
     private fun setParentWindowOpacity(visible: Boolean) {
-        // Namiesto opacity budeme ovládať viditeľnosť celého okna
         val window = SwingUtilities.getWindowAncestor(recordButton) ?: return
-        window.isVisible = visible
+        if (!visible) {
+            savedWindowBounds = window.bounds
+            window.isVisible = false
+        } else {
+            window.isVisible = true
+            savedWindowBounds?.let { window.bounds = it }
+            savedWindowBounds = null
+            window.revalidate()
+            window.repaint()
+        }
     }
 
     override fun isModified(): Boolean {
@@ -526,39 +646,46 @@ class GestureSettingsConfig : Configurable {
         override fun toString() = displayName
     }
 
-    /**
-     * Farebné tlačidlo = jeden klik zobrazí výber farieb.
-     * Zobrazuje len Swatches tab – žiadne HSL/RGB/CMYK panely.
-     */
     inner class ColorPickerField(initialHex: String) : JButton() {
         var hex: String = initialHex
-            set(value) {
-                field = value; refreshDisplay()
-            }
+            set(value) { field = value; repaint() }
 
         init {
-            preferredSize = Dimension(50, 22)
-            isFocusPainted = false
+            val sz = 22
+            preferredSize = Dimension(sz, sz)
+            minimumSize   = Dimension(sz, sz)
+            maximumSize   = Dimension(sz, sz)
+            isFocusPainted    = false
+            isBorderPainted   = false
+            isContentAreaFilled = false
+            isOpaque          = false
             toolTipText = "Click to choose color"
-            refreshDisplay()
             addActionListener { pickColor() }
         }
 
-        private fun refreshDisplay() {
-            background = runCatching { java.awt.Color.decode(hex) }.getOrDefault(java.awt.Color.GRAY)
-            text = ""
+        override fun paintComponent(g: Graphics) {
+            val g2 = g as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val color = runCatching { java.awt.Color.decode(hex) }.getOrDefault(java.awt.Color.GRAY)
+            g2.color = color
+            g2.fillRoundRect(2, 2, width - 5, height - 5, 5, 5)
+            g2.color = color.darker()
+            g2.stroke = BasicStroke(1.2f)
+            g2.drawRoundRect(2, 2, width - 5, height - 5, 5, 5)
+            if (model.isRollover) {
+                g2.color = java.awt.Color(255, 255, 255, 50)
+                g2.fillRoundRect(2, 2, width - 5, height - 5, 5, 5)
+            }
         }
 
         private fun pickColor() {
             val current = runCatching { java.awt.Color.decode(hex) }.getOrDefault(java.awt.Color.WHITE)
             val chooser = JColorChooser(current)
-            // Zobraz len Swatches tab – odstráni HSL, RGB, CMYK, HSV panely
             val swatches = chooser.chooserPanels.firstOrNull {
                 it.displayName.lowercase().let { n -> n.contains("swatch") || n.contains("palet") }
             }
             if (swatches != null) chooser.chooserPanels = arrayOf(swatches)
-            chooser.previewPanel = JPanel()  // skryje preview lištu
-
+            chooser.previewPanel = JPanel()
             JColorChooser.createDialog(
                 this, "Choose Color", true, chooser,
                 { hex = "#%02X%02X%02X".format(chooser.color.red, chooser.color.green, chooser.color.blue) },

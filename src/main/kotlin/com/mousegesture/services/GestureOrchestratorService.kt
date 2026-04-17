@@ -7,11 +7,13 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.mousegesture.models.GestureDirection
 import com.mousegesture.ui.GestureOverlayComponent
+import java.awt.Component
 import java.awt.Frame
 import java.awt.KeyboardFocusManager
 import java.awt.Point
 import javax.swing.JFrame
 import javax.swing.JLayeredPane
+import javax.swing.RootPaneContainer
 import javax.swing.SwingUtilities
 
 @Service(Service.Level.APP)
@@ -23,6 +25,7 @@ class GestureOrchestratorService {
     private var isRecordingMode = false
     private var recordingCallback: ((List<GestureDirection>) -> Unit)? = null
     private var isSettingsOpen = false
+    private var gestureSourceComponent: Component? = null
 
     private val managerService get() = ApplicationManager.getApplication().service<GestureManagerService>()
     private val mouseService get() = ApplicationManager.getApplication().service<MouseListenerService>()
@@ -40,6 +43,8 @@ class GestureOrchestratorService {
             return
         }
         if (isSettingsOpen && !isRecordingMode) return
+
+        gestureSourceComponent = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
 
         recognitionService.startGesture(screenPoint)
         showOverlay(screenPoint)
@@ -85,7 +90,7 @@ class GestureOrchestratorService {
     }
 
     private fun showOverlay(screenPoint: Point) {
-        val frame = getActiveFrame() ?: return
+        val frame = getActiveRootPane() ?: return
         val layeredPane = frame.rootPane.layeredPane
 
         val component = GestureOverlayComponent()
@@ -123,22 +128,26 @@ class GestureOrchestratorService {
         }
     }
 
-    private fun getActiveFrame(): JFrame? {
-        var window: java.awt.Window? = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusedWindow
-        while (window != null) {
-            if (window is JFrame) return window
-            window = window.owner
+
+    private fun getActiveRootPane(): RootPaneContainer? {
+        val focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusedWindow
+        if (focused is RootPaneContainer) return focused
+        var w = focused?.owner
+        while (w != null) {
+            if (w is RootPaneContainer) return w
+            w = w.owner
         }
         return Frame.getFrames().filterIsInstance<JFrame>().firstOrNull { it.isVisible }
     }
 
     private fun executeAction(actionId: String) {
         val action = ActionManager.getInstance().getAction(actionId) ?: return
-        val focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
-        SwingUtilities.invokeLater {
+        val targetComponent = gestureSourceComponent
+        gestureSourceComponent = null
+        ApplicationManager.getApplication().invokeLater {
             try {
                 ActionManager.getInstance().tryToExecute(
-                    action, null, focusOwner, ActionPlaces.KEYBOARD_SHORTCUT, true
+                    action, null, targetComponent, ActionPlaces.KEYBOARD_SHORTCUT, true
                 )
             } catch (e: Exception) { }
         }
