@@ -100,9 +100,6 @@ class GestureManagerService : PersistentStateComponent<GestureManagerService.Sta
     fun findMatchingGesture(pattern: List<GestureDirection>): MouseGesture? =
         gestures.firstOrNull { it.isEnabled && it.matchesPattern(pattern) }
 
-    fun findGestureWithSamePattern(pattern: List<GestureDirection>, excludeId: String? = null): MouseGesture? =
-        gestures.firstOrNull { (excludeId == null || it.id != excludeId) && it.matchesPattern(pattern) }
-
     fun resetToDefaults() {
         gestures.clear()
         initDefaults()

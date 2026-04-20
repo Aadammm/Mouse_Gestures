@@ -1,5 +1,6 @@
 package com.mousegesture.ui
 
+import com.intellij.ui.Gray
 import com.mousegesture.models.GestureDirection
 import com.mousegesture.models.GestureVisualizationSettings
 import java.awt.*
@@ -88,7 +89,7 @@ class GestureOverlayComponent : JComponent() {
         val bgColor = if (hasMatch) Color(matchRgb.red, matchRgb.green, matchRgb.blue, 220) else Color(40, 40, 40, 220)
         val borderColor = if (hasMatch) Color(
             minOf(matchRgb.red + 60, 255), minOf(matchRgb.green + 60, 255), minOf(matchRgb.blue + 60, 255)
-        ) else Color(200, 200, 200)
+        ) else Gray._200
 
         drawRoundBox(g2, baseX, baseY, dirW, dirH, bgColor, borderColor)
         g2.color = Color.WHITE

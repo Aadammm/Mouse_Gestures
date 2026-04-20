@@ -1,15 +1,11 @@
 package com.mousegesture.configs
 
-import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.*
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import com.mousegesture.models.GestureDirection
@@ -19,9 +15,7 @@ import com.mousegesture.services.GestureOrchestratorService
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
-import java.awt.geom.RoundRectangle2D
 import java.util.*
-import com.intellij.ui.components.JBTabbedPane
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -60,7 +54,6 @@ class GestureSettingsConfig : Configurable {
     private var suppressTableListener = false
     private var recordingGestureId: String? = null
     private var recordingRowIndex: Int = -1
-    private var savedWindowBounds: java.awt.Rectangle? = null
 
     private var isRevertMode = false
     private var revertPattern: List<GestureDirection>? = null
@@ -76,18 +69,57 @@ class GestureSettingsConfig : Configurable {
         return buildMainPanel()
     }
 
-    private fun loadIntellijActions(): List<ActionItem> {
-        return try {
-            val manager = ActionManager.getInstance()
-            manager.getActionIds("").mapNotNull { id ->
-                val text = manager.getAction(id)?.templatePresentation?.text
-                    ?.trim()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                ActionItem(id, text)
-            }.sortedBy { it.displayName }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    private fun loadIntellijActions(): List<ActionItem> = listOf(
+
+        ActionItem("Back",                         "Navigate Backward"),
+        ActionItem("Forward",                      "Navigate Forward"),
+        ActionItem("NextTab",                      "Next Tab"),
+        ActionItem("PreviousTab",                  "Previous Tab"),
+        ActionItem("GotoNextError",                "Next Error / Warning"),
+        ActionItem("GotoPreviousError",            "Previous Error / Warning"),
+        ActionItem("RecentFiles",                  "Recent Files"),
+        ActionItem("Switcher",                     "Switcher (Tabs)"),
+
+        ActionItem("\$Undo",                       "Undo"),
+        ActionItem("\$Redo",                       "Redo"),
+        ActionItem("CommentByLineComment",         "Comment / Uncomment Line"),
+        ActionItem("CommentByBlockComment",        "Block Comment"),
+        ActionItem("ReformatCode",                 "Reformat Code"),
+        ActionItem("OptimizeImports",              "Optimize Imports"),
+        ActionItem("MoveStatementUp",              "Move Statement Up"),
+        ActionItem("MoveStatementDown",            "Move Statement Down"),
+        ActionItem("SelectAllOccurrences",         "Select All Occurrences"),
+        ActionItem("EditorSelectWord",             "Expand Selection"),
+        ActionItem("EditorUnSelectWord",           "Shrink Selection"),
+
+        ActionItem("GotoImplementation",           "Go to Implementation"),
+        ActionItem("GotoDeclaration",              "Go to Declaration"),
+        ActionItem("GotoTypeDeclaration",          "Go to Type Declaration"),
+        ActionItem("FindUsages",                   "Find Usages"),
+        ActionItem("ShowUsages",                   "Show Usages"),
+        ActionItem("QuickJavaDoc",                 "Quick Documentation"),
+        ActionItem("QuickImplementations",         "Quick Implementations"),
+        ActionItem("ShowErrorDescription",         "Show Error Description"),
+        ActionItem("FileStructurePopup",           "File Structure Popup"),
+        ActionItem("Generate",                     "Generate Code"),
+
+        ActionItem("CloseContent",                 "Close Tab"),
+        ActionItem("CloseAllEditorsButActive",     "Close Other Tabs"),
+        ActionItem("ReopenClosedTab",              "Reopen Closed Tab"),
+        ActionItem("SplitVertically",              "Split Editor Vertically"),
+        ActionItem("SplitHorizontally",            "Split Editor Horizontally"),
+        ActionItem("Unsplit",                      "Unsplit Editor"),
+
+        ActionItem("CompileProject",               "Build Project"),
+        ActionItem("Run",                          "Run"),
+        ActionItem("Debug",                        "Debug"),
+        ActionItem("Stop",                         "Stop"),
+        ActionItem("Rerun",                        "Rerun"),
+
+        ActionItem("HideAllWindows",               "Hide All Tool Windows"),
+        ActionItem("MaximizeEditorInSplit",        "Maximize Editor"),
+        ActionItem("NewScratchFile",               "New Scratch File"),
+    )
 
     private fun buildMainPanel(): JPanel {
         val panel = JPanel(BorderLayout(8, 8))
@@ -182,13 +214,11 @@ class GestureSettingsConfig : Configurable {
             ): Component {
                 val lbl = super.getTableCellRendererComponent(t, value, sel, focus, row, col) as JLabel
                 lbl.text = if (value == true) "✓" else "✗"
-                lbl.horizontalAlignment = SwingConstants.CENTER
+                lbl.horizontalAlignment = CENTER
                 return lbl
             }
         }
 
-        // suppressTableListener zabraňuje aby refreshTable() spúšťal loadGestureIntoEditPanel()
-        // a prerušoval kliknutie na nové akcie v zozname
         table.selectionModel.addListSelectionListener {
             if (!it.valueIsAdjusting && !suppressTableListener) loadGestureIntoEditPanel()
         }
@@ -211,7 +241,7 @@ class GestureSettingsConfig : Configurable {
     private fun buildEditPanel(): JPanel {
         val panel = JPanel(GridBagLayout())
         panel.border = BorderFactory.createTitledBorder("Edit Gesture")
-        val g = GridBagConstraints().apply { insets = Insets(3, 6, 3, 6); anchor = GridBagConstraints.WEST }
+        val g = GridBagConstraints().apply { insets = JBUI.insets(3, 6); anchor = GridBagConstraints.WEST }
 
         g.gridx = 0; g.gridy = 0; g.weightx = 0.0; g.fill = GridBagConstraints.NONE
         panel.add(JBLabel("Name:"), g)
@@ -246,7 +276,7 @@ class GestureSettingsConfig : Configurable {
         g.gridx = 0; g.gridy = 4; g.weightx = 0.0; g.fill = GridBagConstraints.NONE
         panel.add(JBLabel("Search action:"), g)
         actionSearchField = JBTextField()
-        actionSearchField.toolTipText = "Type action name or ID (e.g. comment, reformat, build...)"
+        actionSearchField.toolTipText = "Type action name or ID (e.g., comment, reformat, build...)"
         g.gridx = 1; g.weightx = 1.0; g.fill = GridBagConstraints.HORIZONTAL
         panel.add(actionSearchField, g)
         actionSearchField.document.addDocumentListener(object : DocumentListener {
@@ -256,7 +286,7 @@ class GestureSettingsConfig : Configurable {
         })
 
         actionListModel = DefaultListModel()
-        actionList = JList(actionListModel)
+        actionList = JBList(actionListModel)
         actionList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         actionList.cellRenderer = ActionListRenderer()
         actionList.addListSelectionListener {
@@ -293,7 +323,7 @@ class GestureSettingsConfig : Configurable {
     private fun buildVisualizationPanel(): JPanel {
         val panel = JPanel(GridBagLayout())
         panel.border = BorderFactory.createTitledBorder("Gesture Visualization")
-        val g = GridBagConstraints().apply { insets = Insets(3, 6, 3, 6); anchor = GridBagConstraints.WEST }
+        val g = GridBagConstraints().apply { insets = JBUI.insets(3, 6); anchor = GridBagConstraints.WEST }
         val vis = managerService.visualizationSettings
 
         showTrailCheck = JBCheckBox("Show gesture trail", vis.showTrail)
@@ -306,14 +336,13 @@ class GestureSettingsConfig : Configurable {
         g.gridy = 1; panel.add(showDirectionsCheck, g)
         g.gridwidth = 1
 
-        val defaultInsets = Insets(3, 6, 3, 6)
-        val gapInsets    = Insets(3, 14, 3, 6)
+        val defaultInsets = JBUI.insets(3, 6)
+        val gapInsets    = JBUI.insets(3, 14, 3, 6)
         g.gridy = 2; g.gridx = 0; g.fill = GridBagConstraints.NONE; g.weightx = 0.0
         g.insets = defaultInsets; panel.add(JBLabel("Trail:"), g)
         g.gridx = 1; panel.add(trailColorPicker, g)
         g.gridx = 2; g.insets = gapInsets; panel.add(JBLabel("Match:"), g)
         g.gridx = 3; g.insets = defaultInsets; panel.add(matchColorPicker, g)
-        // prázdny filler aby ostatné stĺpce neboli roztiahnuté
         g.gridx = 4; g.weightx = 1.0; g.fill = GridBagConstraints.HORIZONTAL
         panel.add(JPanel().also { it.isOpaque = false }, g)
 
@@ -368,11 +397,6 @@ class GestureSettingsConfig : Configurable {
         refreshTable()
     }
 
-    /**
-     * Prekreslí tabuľku bez spustenia loadGestureIntoEditPanel().
-     * suppressTableListener zabraňuje aby setSelectionInterval() spustilo
-     * loadGestureIntoEditPanel() a tým prerušilo kliknutie na nové akcie v zozname.
-     */
     private fun refreshTable() {
         val row = table.selectedRow
         suppressTableListener = true
@@ -432,7 +456,6 @@ class GestureSettingsConfig : Configurable {
             workingGestures.addAll(managerService.getGestures().map { it.copy() })
             tableModel.fireTableDataChanged()
             setEditPanelEnabled(false)
-            // Obnov aj vizualizačné UI komponenty na predvolené hodnoty
             val vis = managerService.visualizationSettings
             showTrailCheck.isSelected = vis.showTrail
             showDirectionsCheck.isSelected = vis.showDirections
@@ -452,40 +475,29 @@ class GestureSettingsConfig : Configurable {
 
     private fun startRecording() {
         val gesture = selectedGesture() ?: return
-        // Ulož aktuálny vzor pre prípad revertu
         isRevertMode = false
         revertPattern = gesture.pattern.toList()
         revertGestureId = gesture.id
-
         recordingGestureId = gesture.id
         recordingRowIndex = table.selectedRow
-
-        setParentWindowOpacity(false)
         isRecording = true
-        recordButton.text = "⏹ Cancel"
-        patternLabel.text = "Draw gesture..."
+        recordButton.text = "⏹ Stop"
+        patternLabel.text = "▶ Draw gesture with the right mouse button"
         duplicateWarningLabel.text = " "
 
         orchestratorService.startGestureRecording { pattern ->
             SwingUtilities.invokeLater {
-                setParentWindowOpacity(true)
-                val window = SwingUtilities.getWindowAncestor(recordButton)
-                window?.toFront()
-                window?.requestFocus()
-                SwingUtilities.invokeLater {
-                    if (recordingRowIndex >= 0 && recordingRowIndex < workingGestures.size) {
-                        suppressTableListener = true
-                        table.selectionModel.setSelectionInterval(recordingRowIndex, recordingRowIndex)
-                        suppressTableListener = false
-                    }
-                    onGestureRecorded(pattern)
+                if (recordingRowIndex >= 0 && recordingRowIndex < workingGestures.size) {
+                    suppressTableListener = true
+                    table.selectionModel.setSelectionInterval(recordingRowIndex, recordingRowIndex)
+                    suppressTableListener = false
                 }
+                onGestureRecorded(pattern)
             }
         }
     }
 
     private fun cancelRecording() {
-        setParentWindowOpacity(true)
         isRecording = false
         isRevertMode = false
         revertPattern = null
@@ -497,7 +509,6 @@ class GestureSettingsConfig : Configurable {
         loadGestureIntoEditPanel()
     }
 
-    /** Vráti gesto na vzor pred nahrávaním. */
     private fun revertRecording() {
         val gesture = workingGestures.firstOrNull { it.id == revertGestureId } ?: return
         gesture.pattern = revertPattern ?: emptyList()
@@ -549,20 +560,6 @@ class GestureSettingsConfig : Configurable {
         }
     }
 
-    private fun setParentWindowOpacity(visible: Boolean) {
-        val window = SwingUtilities.getWindowAncestor(recordButton) ?: return
-        if (!visible) {
-            savedWindowBounds = window.bounds
-            window.isVisible = false
-        } else {
-            window.isVisible = true
-            savedWindowBounds?.let { window.bounds = it }
-            savedWindowBounds = null
-            window.revalidate()
-            window.repaint()
-        }
-    }
-
     override fun isModified(): Boolean {
         val orig = managerService.getGestures()
         if (orig.size != workingGestures.size) return true
@@ -609,9 +606,7 @@ class GestureSettingsConfig : Configurable {
         orchestratorService.setSettingsOpen(false)
     }
 
-    // ── Inner classes ─────────────────────────────────────────────────────
-
-    inner class GestureTableModel(private val data: List<MouseGesture>) : AbstractTableModel() {
+    class GestureTableModel(private val data: List<MouseGesture>) : AbstractTableModel() {
         private val cols = arrayOf("Name", "Pattern", "Action", "✓")
         override fun getRowCount() = data.size
         override fun getColumnCount() = cols.size
@@ -626,7 +621,7 @@ class GestureSettingsConfig : Configurable {
         }
     }
 
-    inner class ActionListRenderer : DefaultListCellRenderer() {
+    class ActionListRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
             list: JList<*>,
             value: Any?,
@@ -659,27 +654,27 @@ class GestureSettingsConfig : Configurable {
             isBorderPainted   = false
             isContentAreaFilled = false
             isOpaque          = false
-            toolTipText = "Click to choose color"
+            toolTipText = "Click to choose a color"
             addActionListener { pickColor() }
         }
 
         override fun paintComponent(g: Graphics) {
             val g2 = g as Graphics2D
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val color = runCatching { java.awt.Color.decode(hex) }.getOrDefault(java.awt.Color.GRAY)
+            val color = runCatching { Color.decode(hex) }.getOrDefault(Color.GRAY)
             g2.color = color
             g2.fillRoundRect(2, 2, width - 5, height - 5, 5, 5)
             g2.color = color.darker()
             g2.stroke = BasicStroke(1.2f)
             g2.drawRoundRect(2, 2, width - 5, height - 5, 5, 5)
             if (model.isRollover) {
-                g2.color = java.awt.Color(255, 255, 255, 50)
+                g2.color = Color(255, 255, 255, 50)
                 g2.fillRoundRect(2, 2, width - 5, height - 5, 5, 5)
             }
         }
 
         private fun pickColor() {
-            val current = runCatching { java.awt.Color.decode(hex) }.getOrDefault(java.awt.Color.WHITE)
+            val current = runCatching { Color.decode(hex) }.getOrDefault(Color.WHITE)
             val chooser = JColorChooser(current)
             val swatches = chooser.chooserPanels.firstOrNull {
                 it.displayName.lowercase().let { n -> n.contains("swatch") || n.contains("palet") }

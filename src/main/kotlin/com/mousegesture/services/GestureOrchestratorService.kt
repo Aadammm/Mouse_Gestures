@@ -1,10 +1,12 @@
 package com.mousegesture.services
 
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.ex.IdeDocumentHistory
 import com.mousegesture.models.GestureDirection
 import com.mousegesture.ui.GestureOverlayComponent
 import java.awt.Component
@@ -14,7 +16,6 @@ import java.awt.Point
 import javax.swing.JFrame
 import javax.swing.JLayeredPane
 import javax.swing.RootPaneContainer
-import javax.swing.SwingUtilities
 
 @Service(Service.Level.APP)
 class GestureOrchestratorService {
@@ -140,17 +141,52 @@ class GestureOrchestratorService {
         return Frame.getFrames().filterIsInstance<JFrame>().firstOrNull { it.isVisible }
     }
 
+
+    private val specialHandlers: Map<String, (DataContext) -> Unit> = mapOf(
+        "Back" to ::handleBack,
+        "Forward" to ::handleForward,
+        "\$Undo" to ::handleUndo,
+        "\$Redo" to ::handleRedo,
+    )
+
     private fun executeAction(actionId: String) {
-        val action = ActionManager.getInstance().getAction(actionId) ?: return
         val targetComponent = gestureSourceComponent
         gestureSourceComponent = null
         ApplicationManager.getApplication().invokeLater {
             try {
-                ActionManager.getInstance().tryToExecute(
-                    action, null, targetComponent, ActionPlaces.KEYBOARD_SHORTCUT, true
-                )
-            } catch (e: Exception) { }
+                val ctx = targetComponent
+                    ?.let { DataManager.getInstance().getDataContext(it) }
+                    ?: return@invokeLater
+                specialHandlers[actionId]?.invoke(ctx)
+                    ?: handleGenericAction(actionId, targetComponent)
+            } catch (_: Exception) {
+            }
         }
+    }
+
+    private fun handleBack(ctx: DataContext) {
+        CommonDataKeys.PROJECT.getData(ctx)?.let { IdeDocumentHistory.getInstance(it).back() }
+    }
+
+    private fun handleForward(ctx: DataContext) {
+        CommonDataKeys.PROJECT.getData(ctx)?.let { IdeDocumentHistory.getInstance(it).forward() }
+    }
+
+    private fun handleUndo(ctx: DataContext) {
+        val project = CommonDataKeys.PROJECT.getData(ctx) ?: return
+        val fileEditor = PlatformDataKeys.FILE_EDITOR.getData(ctx)
+        UndoManager.getInstance(project).takeIf { it.isUndoAvailable(fileEditor) }?.undo(fileEditor)
+    }
+
+    private fun handleRedo(ctx: DataContext) {
+        val project = CommonDataKeys.PROJECT.getData(ctx) ?: return
+        val fileEditor = PlatformDataKeys.FILE_EDITOR.getData(ctx)
+        UndoManager.getInstance(project).takeIf { it.isRedoAvailable(fileEditor) }?.redo(fileEditor)
+    }
+
+    private fun handleGenericAction(actionId: String, component: Component?) {
+        val action = ActionManager.getInstance().getAction(actionId) ?: return
+        ActionManager.getInstance().tryToExecute(action, null, component, ActionPlaces.KEYBOARD_SHORTCUT, true)
     }
 
     fun startGestureRecording(callback: (List<GestureDirection>) -> Unit) {

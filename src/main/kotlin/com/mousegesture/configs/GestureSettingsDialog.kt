@@ -17,7 +17,7 @@ class GestureSettingsDialog(
     }
 
     override fun createCenterPanel(): JComponent = config.createComponent()!!
-    override fun getInitialSize(): Dimension = Dimension(860, 620)
+    override fun getInitialSize(): Dimension = Dimension(1060, 820)
     override fun getPreferredFocusedComponent(): JComponent? = null
 
     override fun doOKAction() {

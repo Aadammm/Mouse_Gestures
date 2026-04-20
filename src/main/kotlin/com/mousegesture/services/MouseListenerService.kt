@@ -48,14 +48,13 @@ class MouseListenerService : Disposable {
         return when {
             event.id == MouseEvent.MOUSE_PRESSED && SwingUtilities.isRightMouseButton(event) -> {
                 handleRightButtonDown(Point(event.xOnScreen, event.yOnScreen))
-                false
+                true
             }
 
             event.id == MouseEvent.MOUSE_RELEASED && SwingUtilities.isRightMouseButton(event) -> {
                 val wasGestureActive = isGestureActive
-                val wasRecordingMode = isRecordingMode
                 handleRightButtonUp()
-                wasGestureActive && !wasRecordingMode
+                wasGestureActive
             }
 
             event.id == MouseEvent.MOUSE_DRAGGED && isRightButtonDown -> {
