@@ -13,6 +13,7 @@ import java.awt.Component
 import java.awt.Frame
 import java.awt.KeyboardFocusManager
 import java.awt.Point
+import javax.swing.JComponent
 import javax.swing.JFrame
 import javax.swing.JLayeredPane
 import javax.swing.RootPaneContainer
@@ -31,7 +32,7 @@ class GestureOrchestratorService {
     private val managerService get() = ApplicationManager.getApplication().service<GestureManagerService>()
     private val mouseService get() = ApplicationManager.getApplication().service<MouseListenerService>()
 
-    fun start() {
+    init {
         mouseService.onGestureStarted = ::onGestureStarted
         mouseService.onGesturePointAdded = ::onGesturePointAdded
         mouseService.onGestureEnded = ::onGestureEnded
@@ -120,7 +121,7 @@ class GestureOrchestratorService {
         return screenToLocal(screenPoint, pane)
     }
 
-    private fun screenToLocal(screenPoint: Point, component: javax.swing.JComponent): Point {
+    private fun screenToLocal(screenPoint: Point, component: JComponent): Point {
         return try {
             val loc = component.locationOnScreen
             Point(screenPoint.x - loc.x, screenPoint.y - loc.y)
@@ -154,11 +155,8 @@ class GestureOrchestratorService {
         gestureSourceComponent = null
         ApplicationManager.getApplication().invokeLater {
             try {
-                val ctx = targetComponent
-                    ?.let { DataManager.getInstance().getDataContext(it) }
-                    ?: return@invokeLater
-                specialHandlers[actionId]?.invoke(ctx)
-                    ?: handleGenericAction(actionId, targetComponent)
+                val ctx = targetComponent?.let { DataManager.getInstance().getDataContext(it) } ?: return@invokeLater
+                specialHandlers[actionId]?.invoke(ctx) ?: handleGenericAction(actionId, targetComponent)
             } catch (_: Exception) {
             }
         }

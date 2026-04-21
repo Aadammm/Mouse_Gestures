@@ -21,7 +21,7 @@ class GestureRecognitionService {
     }
 
     fun endGesture(): List<GestureDirection> {
-       return recognizeDirections()
+        return recognizeDirections()
     }
 
     fun recognizeDirections(): List<GestureDirection> {

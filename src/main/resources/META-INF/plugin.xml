@@ -1,20 +1,50 @@
 <idea-plugin>
     <id>com.mousegesture</id>
     <name>Mouse Gestures</name>
-    <version>1.0.0</version>
-    <vendor>MouseGesture</vendor>
-    <description>Execute IntelliJ actions by drawing mouse gestures. Hold right mouse button and drag to perform a gesture.</description>
+    <vendor url="https://github.com/Aadammm/Mouse_Gestures" email="janak.adam0@gmail.com">Mouse Gestures</vendor>
+    <category>Tools Integration</category>
+
+    <description><![CDATA[
+        <h3>Mouse Gestures for IntelliJ IDEA</h3>
+        <p>
+          Execute IDE actions by drawing mouse gestures. Hold the <b>right mouse button</b>,
+          drag to draw a shape, then release — the assigned action fires instantly.
+        </p>
+        <h4>Features</h4>
+        <ul>
+          <li>Fully customizable gesture-to-action mappings</li>
+          <li>40+ built-in actions: navigate, edit, build, debug, and more</li>
+          <li>Live gesture trail with direction arrows drawn directly in the IDE</li>
+          <li>Real-time match preview — see which action will fire before releasing</li>
+          <li>Color and thickness customization for the gesture trail</li>
+          <li>Gesture recording mode with duplicate-pattern detection</li>
+          <li>Per-gesture enable/disable toggle</li>
+          <li>Short right-click still shows the context menu — no conflicts</li>
+        </ul>
+        <h4>Default gestures</h4>
+        <ul>
+          <li>← Left — Navigate Backward</li>
+          <li>→ Right — Navigate Forward</li>
+          <li>↓ Down — Comment / Uncomment Line</li>
+          <li>↓↘ Down-Right — Close Tab</li>
+        </ul>
+        <p>Open <b>Settings → Tools → Mouse Gestures</b> to add your own.</p>
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <h4>1.0.0</h4>
+        <ul>
+          <li>Initial release</li>
+          <li>Gesture recording with live trail overlay</li>
+          <li>40+ curated IntelliJ actions</li>
+          <li>Correct Undo/Redo/Back/Forward via direct IDE APIs</li>
+          <li>Visualization settings (trail color, thickness, direction arrows)</li>
+        </ul>
+    ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService
-                serviceImplementation="com.mousegesture.services.GestureManagerService"/>
-        <applicationService
-                serviceImplementation="com.mousegesture.services.MouseListenerService"/>
-        <applicationService
-                serviceImplementation="com.mousegesture.services.GestureOrchestratorService"/>
-
         <applicationConfigurable
                 parentId="tools"
                 instance="com.mousegesture.configs.GestureSettingsConfig"

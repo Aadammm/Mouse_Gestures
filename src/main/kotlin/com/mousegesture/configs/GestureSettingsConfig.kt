@@ -157,13 +157,13 @@ class GestureSettingsConfig : Configurable {
             <html>
             <h2>Mouse Gestures Plugin</h2>
             <p><b>Version:</b> 1.0.0</p>
-            <p><b>Author:</b> TODO – fill in manually</p>
             <br>
             <h3>How to use</h3>
             <ul>
               <li>Hold the <b>right mouse button</b> and drag to draw a gesture.</li>
               <li>Release to execute the assigned action.</li>
-              <li>A short right-click (no drag) still shows the context menu.</li>
+              <li>A short right-click (no drag) still shows the context menu — no conflicts.</li>
+              <li>While drawing, a live trail shows the current gesture and a preview of the matched action.</li>
             </ul>
             <br>
             <h3>Default gestures</h3>
@@ -171,20 +171,26 @@ class GestureSettingsConfig : Configurable {
               <tr><th>Gesture</th><th>Action</th></tr>
               <tr><td>← Left</td><td>Navigate Backward</td></tr>
               <tr><td>→ Right</td><td>Navigate Forward</td></tr>
-              <tr><td>↓ Down</td><td>Comment/Uncomment Line</td></tr>
-              <tr><td>↓ Down → Right</td><td>Close Tab</td></tr>
+              <tr><td>↓ Down</td><td>Comment / Uncomment Line</td></tr>
+              <tr><td>↓↘ Down + Right</td><td>Close Tab</td></tr>
             </table>
             <br>
             <h3>Adding / editing gestures</h3>
             <ol>
               <li>Click <b>+ Add</b> or select an existing gesture in the list.</li>
               <li>Enter a name and click <b>⏺ Record Gesture</b>.</li>
-              <li>Draw the gesture with the right mouse button – the settings window hides temporarily.</li>
+              <li>Draw the gesture with the right mouse button directly over this settings window.</li>
               <li>Select an action from the list or type an action ID directly.</li>
-              <li>Click <b>OK</b> to save.</li>
+              <li>Click <b>Apply</b> or <b>OK</b> to save.</li>
             </ol>
             <br>
-            <p><i>TODO: add your own notes here.</i></p>
+            <h3>Tips</h3>
+            <ul>
+              <li>Use <b>↩ Revert</b> after recording to undo an accidental gesture change.</li>
+              <li>Duplicate patterns are highlighted with a warning — each gesture must be unique.</li>
+              <li>Trail color, match color, and thickness can be customized in the <i>Gesture Visualization</i> section.</li>
+              <li>Individual gestures can be disabled without deleting them.</li>
+            </ul>
             </html>
         """.trimIndent()
 
@@ -641,6 +647,7 @@ class GestureSettingsConfig : Configurable {
         override fun toString() = displayName
     }
 
+    @Suppress("UseJBColor")
     inner class ColorPickerField(initialHex: String) : JButton() {
         var hex: String = initialHex
             set(value) { field = value; repaint() }
@@ -661,7 +668,7 @@ class GestureSettingsConfig : Configurable {
         override fun paintComponent(g: Graphics) {
             val g2 = g as Graphics2D
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val color = runCatching { Color.decode(hex) }.getOrDefault(Color.GRAY)
+            val color = runCatching { Color.decode(hex) }.getOrDefault(JBColor.GRAY)
             g2.color = color
             g2.fillRoundRect(2, 2, width - 5, height - 5, 5, 5)
             g2.color = color.darker()
@@ -674,7 +681,7 @@ class GestureSettingsConfig : Configurable {
         }
 
         private fun pickColor() {
-            val current = runCatching { Color.decode(hex) }.getOrDefault(Color.WHITE)
+            val current = runCatching { Color.decode(hex) }.getOrDefault(JBColor.WHITE)
             val chooser = JColorChooser(current)
             val swatches = chooser.chooserPanels.firstOrNull {
                 it.displayName.lowercase().let { n -> n.contains("swatch") || n.contains("palet") }
