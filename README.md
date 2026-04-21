@@ -19,19 +19,17 @@ A simple and intuitive mouse gestures plugin for IntelliJ IDEA. Perform common I
 ## 🖱 How to Use
 Hold the **Right Mouse Button** (default) and draw the gesture on the screen:
 
-| Gesture | Action |
-| :--- | :--- |
-| **←** (Left) | Navigate Back |
-| **→** (Right) | Navigate Forward |
-| **↓** (Down) | Close Current Tab |
-| **∟** (Right then Up) | Create New File |
+| Gesture | Action 
+| :--- | :---
+| **←** | **Navigate Backward**
+| **→** | **Navigate Forward**
+| **↓** | **Comment/Uncomment Line**
+| **↳** | **Close Tab**
 
 ## 🙏 Acknowledgements
 This project wouldn't be possible without the inspiration and work of others:
 
 * **[MouseGestures](https://github.com/Quasabe/MouseGestures)** by **Quasabe** - Main inspiration and foundation for this project.
-* **[JetBrains](https://www.jetbrains.com/)** - For providing the IntelliJ Platform SDK.
-* **AI Collaboration** - Assistance with the SVG iconography and licensing structure.
 
 ## 📄 License
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
